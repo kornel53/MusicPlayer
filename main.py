@@ -187,17 +187,20 @@ class MainWindow(QMainWindow):
             pass
 
     def qmp_mediaStatusChanged(self):
-        if self.player.mediaStatus() == QMediaPlayer.LoadedMedia and self.userAction == 1:
+        if (self.player.mediaStatus() == QMediaPlayer.LoadedMedia or self.player.mediaStatus() == QMediaPlayer.BufferedMedia) and self.userAction == 1:
             durationT = self.player.duration()
             self.centralWidget().layout().itemAt(0).layout().itemAt(1).widget().setRange(0, durationT)
             self.centralWidget().layout().itemAt(0).layout().itemAt(2).widget().setText(
                 '%d:%02d' % (int(durationT / 60000), int((durationT / 1000) % 60)))
+            self.setCurrentSong(self.currentPlaylist.currentIndex())
             self.player.play()
+
 
     def qmp_mediaChanged(self):
         durationT = self.player.duration()
         self.centralWidget().layout().itemAt(0).layout().itemAt(2).widget().setText(
             '%d:%02d' % (int(durationT / 60000), int((durationT / 1000) % 60)))
+
 
     def qmp_stateChanged(self):
         if self.player.state() == QMediaPlayer.StoppedState:
@@ -233,9 +236,7 @@ class MainWindow(QMainWindow):
 
     def clearStyles(self):
         playlistLength = self.songsListWidget.count()
-        print("Playlist length: ", playlistLength)
         for i in range(playlistLength):
-            print(i)
             self.songsListWidget.item(i).setForeground(Qt.black)
     def fileOpen(self):
         fileAc = QAction('Open File', self)
@@ -252,10 +253,8 @@ class MainWindow(QMainWindow):
             self.currentPlaylist.addMedia(QMediaContent(QUrl.fromLocalFile(fileChoosen[0])))
             newSongItem = QListWidgetItem(fileName)
             self.songsListWidget.addItem(newSongItem)
-            print("Playlist length", self.currentPlaylist.mediaCount())
             if self.currentPlaylist.mediaCount() == 1:
-                self.songsListWidget.setCurrentItem(newSongItem)
-                self.songsListWidget.currentItem().setForeground(Qt.red)
+                self.setCurrentSong(0)
 
     def folderOpen(self):
         folderAc = QAction('Open Folder', self)
@@ -280,8 +279,7 @@ class MainWindow(QMainWindow):
                         newSongItem = QListWidgetItem(fInfo.fileName())
                         self.songsListWidget.addItem(newSongItem)
                         if self.currentPlaylist.mediaCount() == 1:
-                            self.songsListWidget.setCurrentItem(newSongItem)
-                            self.songsListWidget.currentItem().setForeground(Qt.red)
+                            self.setCurrentSong(0)
                 it.next()
 
     def songInfo(self):
@@ -305,6 +303,11 @@ class MainWindow(QMainWindow):
         infoBox.addButton('OK', QMessageBox.AcceptRole)
         infoBox.show()
 
+    def setCurrentSong(self, index):
+        self.songsListWidget.setCurrentRow(index)
+        self.clearStyles()
+        self.songsListWidget.currentItem().setForeground(Qt.red)
+
     def prevItemPlaylist(self):
         self.player.playlist().previous()
         if self.currentPlaylist.currentIndex() == -1:
@@ -312,9 +315,7 @@ class MainWindow(QMainWindow):
         else:
             previousItemIndex = self.currentPlaylist.currentIndex()
         # print("Current index playlist: ", self.currentPlaylist.currentIndex())
-        self.songsListWidget.setCurrentRow(previousItemIndex)
-        self.clearStyles()
-        self.songsListWidget.currentItem().setForeground(Qt.red)
+        self.setCurrentSong(previousItemIndex)
 
 
     def nextItemPlaylist(self):
@@ -324,9 +325,7 @@ class MainWindow(QMainWindow):
         else:
             nextItemIndex = self.currentPlaylist.currentIndex()
         # print("Current index playlist: ", self.currentPlaylist.currentIndex())
-        self.songsListWidget.setCurrentRow(nextItemIndex)
-        self.clearStyles()
-        self.songsListWidget.currentItem().setForeground(Qt.red)
+        self.setCurrentSong(nextItemIndex)
 
     def exitAction(self):
         exitAc = QAction('&Exit', self)
