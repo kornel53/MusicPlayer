@@ -11,6 +11,7 @@ from PyQt5 import QtGui
 from PyQt5.QtWidgets import *
 from PyQt5.QtMultimedia import *
 from PyQt5.QtCore import *
+import exitDialog
 
 
 class MainWindow(QMainWindow):
@@ -19,18 +20,28 @@ class MainWindow(QMainWindow):
 
         # self.currentFile = '/'
         self.currentPlaylist = QMediaPlaylist()
+        self.currentPlaylist.setPlaybackMode(QMediaPlaylist.Loop)
         self.player = QMediaPlayer()
+        self.playBtn = None
+        self.pauseBtn = None
+        self.stopBtn = None
+        self.volumeDownBtn = None
+        self.volumeUpBtn = None
+        self.prevBtn = QPushButton("Previous song")
+        self.nextBtn = QPushButton("Next song")
+        self.prevBtn.setEnabled(False)
+        self.nextBtn.setEnabled(False)
+
         self.userAction = -1  # 0- stopped, 1- playing 2-paused
         self.player.mediaStatusChanged.connect(self.qmp_mediaStatusChanged)
         self.player.mediaChanged.connect(self.qmp_mediaChanged)
         self.player.stateChanged.connect(self.qmp_stateChanged)
         self.player.positionChanged.connect(self.qmp_positionChanged)
         self.player.volumeChanged.connect(self.qmp_volumeChanged)
-        self.player.setVolume(60)
+        self.player.setVolume(20)
 
         self.songsListWidget = QListWidget()
-        # self.songsListWidget.currentItemChanged.connect(self.songsListWidget.currentSongChanged)
-        # self.songsListWidget.doubleClicked.connect(self.songsListWidget.songDoubleClicked)
+        self.songsListWidget.doubleClicked.connect(self.songDoubleClicked)
         # Add Status bar
         self.statusBar().showMessage('No Media :: %d' % self.player.volume())
         self.homeScreen()
@@ -57,7 +68,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(centralWidget)
 
         # Set Dimensions of the MainWindow
-        self.resize(200, 100)
+        self.resize(200, 600)
 
         # show everything.
         self.show()
@@ -80,37 +91,37 @@ class MainWindow(QMainWindow):
         playlistCtrlLayout = QHBoxLayout()
 
         # creating buttons
-        playBtn = QPushButton('Play')  # play button
+        self.playBtn = QPushButton('Play')  # play button
         playIcon = self.style().standardIcon(QStyle.SP_MediaPlay)
-        playBtn.setIcon(playIcon)
-        pauseBtn = QPushButton()  # pause button
+        self.playBtn.setIcon(playIcon)
+        self.pauseBtn = QPushButton('Pause')  # pause button
         pauseIcon = self.style().standardIcon(QStyle.SP_MediaPause)
-        pauseBtn.setIcon(pauseIcon)
-        stopBtn = QPushButton('Stop')  # stop button
+        self.pauseBtn.setIcon(pauseIcon)
+        self.stopBtn = QPushButton('Stop')  # stop button
         stopIcon = self.style().standardIcon(QStyle.SP_MediaStop)
-        stopBtn.setIcon(stopIcon)
+        self.stopBtn.setIcon(stopIcon)
         scriptDir = os.path.dirname(os.path.realpath(__file__))
-        volumeDownBtn = QPushButton()  # Decrease Volume
+        self.volumeDownBtn = QPushButton()  # Decrease Volume
         volumeDownIcon = QtGui.QIcon(scriptDir + os.path.sep + 'volume_down.png')
-        volumeDownBtn.setIcon(volumeDownIcon)
-        volumeUpBtn = QPushButton()  # Increase Volume
+        self.volumeDownBtn.setIcon(volumeDownIcon)
+        self.volumeUpBtn = QPushButton()  # Increase Volume
         volumeUpIcon = QtGui.QIcon(scriptDir + os.path.sep + 'volume_up.png')
-        volumeUpBtn.setIcon(volumeUpIcon)
+        self.volumeUpBtn.setIcon(volumeUpIcon)
 
         # creating playlist controls
-        prevBtn = QPushButton('Previous Song')
+        # prevBtn = QPushButton('Previous Song')
         prevBtnIcon = self.style().standardIcon(QStyle.SP_MediaSeekBackward)
-        prevBtn.setIcon(prevBtnIcon)
-        nextBtn = QPushButton('Next Song')
+        self.prevBtn.setIcon(prevBtnIcon)
+        # nextBtn = QPushButton('Next Song')
         nextBtnIcon = self.style().standardIcon(QStyle.SP_MediaSeekForward)
-        nextBtn.setIcon(nextBtnIcon)
+        self.nextBtn.setIcon(nextBtnIcon)
 
         # creating seek slider
         seekSlider = QSlider()
         seekSlider.setMinimum(0)
         seekSlider.setMaximum(100)
         seekSlider.setOrientation(Qt.Horizontal)
-        seekSlider.setTracking(False)
+        seekSlider.setTracking(True)
         seekSlider.sliderMoved.connect(self.seekPosition)
         # seekSlider.valueChanged.connect(self.seekPosition)
 
@@ -120,35 +131,59 @@ class MainWindow(QMainWindow):
         seekSliderLayout.addWidget(seekSlider)
         seekSliderLayout.addWidget(seekSliderLabel2)
 
+        # playlist playback mode
+        playbackModeGroupBox = QGroupBox('Playback mode')
+        sequentialRadioBtn = QRadioButton('Sequential', self)
+        randomRadioBtn = QRadioButton('Random', self)
+        loopRadioBtn = QRadioButton('Loop', self)
+
+        sequentialRadioBtn.toggled.connect(self.changeToSequential)
+        randomRadioBtn.toggled.connect(self.changeToRandom)
+        loopRadioBtn.toggled.connect(self.changeToLoop)
+
+
+        playbackModeLayout = QHBoxLayout()
+        playbackModeLayout.addWidget(sequentialRadioBtn)
+        playbackModeLayout.addWidget(randomRadioBtn)
+        playbackModeLayout.addWidget(loopRadioBtn)
+        playbackModeGroupBox.setLayout(playbackModeLayout)
+
+
+
+
         # Add handler for each button. Not using the default slots.
-        playBtn.clicked.connect(self.playHandler)
-        pauseBtn.clicked.connect(self.pauseHandler)
-        stopBtn.clicked.connect(self.stopHandler)
-        volumeDownBtn.clicked.connect(self.decreaseVolume)
-        volumeUpBtn.clicked.connect(self.increaseVolume)
+        self.playBtn.clicked.connect(self.playHandler)
+        self.pauseBtn.clicked.connect(self.pauseHandler)
+        self.stopBtn.clicked.connect(self.stopHandler)
+        self.volumeDownBtn.clicked.connect(self.decreaseVolume)
+        self.volumeUpBtn.clicked.connect(self.increaseVolume)
 
         # Adding to the horizontal layout
-        controls.addWidget(volumeDownBtn)
-        controls.addWidget(playBtn)
-        controls.addWidget(pauseBtn)
-        controls.addWidget(stopBtn)
-        controls.addWidget(volumeUpBtn)
+        controls.addWidget(self.volumeDownBtn)
+        controls.addWidget(self.playBtn)
+        controls.addWidget(self.pauseBtn)
+        controls.addWidget(self.stopBtn)
+        controls.addWidget(self.volumeUpBtn)
 
         # playlist control button handlers
-        prevBtn.clicked.connect(self.prevItemPlaylist)
-        nextBtn.clicked.connect(self.nextItemPlaylist)
-        playlistCtrlLayout.addWidget(prevBtn)
-        playlistCtrlLayout.addWidget(nextBtn)
+        self.prevBtn.clicked.connect(self.prevItemPlaylist)
+        self.nextBtn.clicked.connect(self.nextItemPlaylist)
+        playlistCtrlLayout.addWidget(self.prevBtn)
+        playlistCtrlLayout.addWidget(self.nextBtn)
+
 
         # Adding to the vertical layout
         controlArea.addLayout(seekSliderLayout)
         controlArea.addLayout(controls)
         controlArea.addLayout(playlistCtrlLayout)
         controlArea.addWidget(self.songsListWidget)
+        controlArea.addWidget(playbackModeGroupBox)
         return controlArea
 
     def playHandler(self):
         self.userAction = 1
+        self.playBtn.setEnabled(False)
+        self.pauseBtn.setEnabled(True)
         self.statusBar().showMessage('Playing at Volume %d' % self.player.volume())
         if self.player.state() == QMediaPlayer.StoppedState:
             if self.player.mediaStatus() == QMediaPlayer.NoMedia:
@@ -169,6 +204,8 @@ class MainWindow(QMainWindow):
 
     def pauseHandler(self):
         self.userAction = 2
+        self.pauseBtn.setEnabled(False)
+        self.playBtn.setEnabled(True)
         self.statusBar().showMessage('Paused %s at position %s at Volume %d' % \
                                      (self.player.metaData(QMediaMetaData.Title), \
                                       self.centralWidget().layout().itemAt(0).layout().itemAt(0).widget().text(), \
@@ -177,6 +214,8 @@ class MainWindow(QMainWindow):
 
     def stopHandler(self):
         self.userAction = 0
+        self.playBtn.setEnabled(True)
+        self.pauseBtn.setEnabled(False)
         self.statusBar().showMessage('Stopped at Volume %d' % (self.player.volume()))
         if self.player.state() == QMediaPlayer.PlayingState:
             self.stopState = True
@@ -234,10 +273,20 @@ class MainWindow(QMainWindow):
         vol = max(vol - 5, 0)
         self.player.setVolume(vol)
 
+    def changeToSequential(self):
+        self.currentPlaylist.setPlaybackMode(QMediaPlaylist.Sequential)
+
+    def changeToRandom(self):
+        self.currentPlaylist.setPlaybackMode(QMediaPlaylist.Random)
+
+    def changeToLoop(self):
+        self.currentPlaylist.setPlaybackMode(QMediaPlaylist.CurrentItemInLoop)
+
     def clearStyles(self):
         playlistLength = self.songsListWidget.count()
         for i in range(playlistLength):
             self.songsListWidget.item(i).setForeground(Qt.black)
+
     def fileOpen(self):
         fileAc = QAction('Open File', self)
         fileAc.setShortcut('Ctrl+O')
@@ -255,6 +304,10 @@ class MainWindow(QMainWindow):
             self.songsListWidget.addItem(newSongItem)
             if self.currentPlaylist.mediaCount() == 1:
                 self.setCurrentSong(0)
+            else:
+                self.prevBtn.setEnabled(True)
+                self.nextBtn.setEnabled(True)
+
 
     def folderOpen(self):
         folderAc = QAction('Open Folder', self)
@@ -280,6 +333,9 @@ class MainWindow(QMainWindow):
                         self.songsListWidget.addItem(newSongItem)
                         if self.currentPlaylist.mediaCount() == 1:
                             self.setCurrentSong(0)
+                        else:
+                            self.prevBtn.setEnabled(True)
+                            self.nextBtn.setEnabled(True)
                 it.next()
 
     def songInfo(self):
@@ -327,6 +383,11 @@ class MainWindow(QMainWindow):
         # print("Current index playlist: ", self.currentPlaylist.currentIndex())
         self.setCurrentSong(nextItemIndex)
 
+    def songDoubleClicked(self):
+        chosenSongIndex = self.songsListWidget.currentRow()
+        self.currentPlaylist.setCurrentIndex(chosenSongIndex)
+        self.setCurrentSong(chosenSongIndex)
+
     def exitAction(self):
         exitAc = QAction('&Exit', self)
         exitAc.setShortcut('Ctrl+Q')
@@ -335,11 +396,9 @@ class MainWindow(QMainWindow):
         return exitAc
 
     def closeEvent(self, event):
-        reply = QMessageBox.question(self, 'Message', 'Are you sure you want to exit?',
-                                     QMessageBox.Yes | QMessageBox.No,
-                                     QMessageBox.Yes)
-
-        if reply == QMessageBox.Yes:
+        dialog = exitDialog.ExitDialog()
+        result = dialog.exec_()
+        if result:
             qApp.quit()
         else:
             try:
